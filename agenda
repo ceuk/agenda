@@ -1,0 +1,209 @@
+#!/usr/bin/env node
+
+const blessed = require('blessed');
+const sqlite3 = require('sqlite3').verbose();
+const ical = require('node-ical');
+const moment = require('moment')
+const open = require('open')
+const db = new sqlite3.Database(process.env.HOME + "/.local/share/khal/khal.db");
+
+/**
+* Should be something like 'calendarname' (including single quotes)
+* Separate with a comma e.g. "'calendara', 'calendarb'"
+**/
+const AGENDA_CALENDARS = process.env.AGENDA_CALENDARS
+
+// Create a screen object.
+const screen = blessed.screen({
+  smartCSR: true,
+  dockBorders: true,
+  terminal: 'xterm-256color',
+  fullUnicode: true
+});
+
+screen.title = 'Agenda';
+
+const getEvent = data => {
+  for (let k in data) {
+    if (data.hasOwnProperty(k) && data[k].type == 'VEVENT') {
+      return data[k];
+    }
+  }
+}
+
+const title = blessed.box({
+  left: 'center',
+  width: '100%',
+  height: 3,
+  content: "Agenda",
+  align: 'center',
+  border: {
+    type: 'bg',
+    bg: 'lightblack'
+  },
+  style: {
+    fg: 'white',
+    bg: 'lightblack',
+    bold: true
+  }
+})
+
+let agenda
+
+screen.append(title)
+
+function renderAgenda() {
+  agenda && agenda.destroy()
+  agenda = blessed.layout({
+    top: 2,
+    content: "",
+    left: 'center',
+    width: '100%',
+    tags: true,
+    keys: true,
+    padding: {
+      top: 1,
+      left: 2,
+      right: 2,
+      bottom: 1
+    },
+    border: {
+      type: 'bg',
+      bg: 'lightblack'
+    },
+    style: {
+      fg: 'white'
+    }
+  });
+  screen.append(agenda)
+  let agendaItems = []
+  let currSelection = 0
+
+  db.serialize(function () {
+    let todayAppended
+    let tomorrowAppended
+    const from = Math.round(Date.now() / 1000) - 600
+    const to = from + 86400
+
+    db.each(`SELECT item, recs_loc.href, dtstart, dtend, ref, etag, dtype, events.calendar 
+            FROM recs_loc JOIN events ON 
+            recs_loc.href = events.href AND 
+            recs_loc.calendar = events.calendar WHERE 
+            (dtstart >= ${from} AND dtend <= ${to}) AND events.calendar IN (${AGENDA_CALENDARS})
+            ORDER BY dtstart`,
+      function (err, row) {
+        if (err) {
+          console.error(err)
+          return
+        }
+        const ev = getEvent(ical.sync.parseICS(row.item));
+        let startDate
+        if (ev.rrule) {
+          const dates = ev.rrule.between(new Date(from * 1000), new Date(to * 1000))
+          if (!dates.length) return;
+          startDate = moment(dates[0])
+        } else {
+          startDate = moment(ev.start)
+        }
+        const listItem = blessed.box({
+          content: "",
+          left: 'center',
+          keys: true,
+          width: '100%-4',
+          height: 'shrink',
+          focusable: true,
+          tags: true,
+          style: {
+            focus: {
+              fg: 'green'
+            }
+          }
+        });
+
+        listItem.on('keypress', (key, e) => {
+          if (key === 'j' && currSelection < (agendaItems.length - 1)) {
+            currSelection++
+            screen.focusNext()
+          }
+          if (key === 'k' && currSelection > 0) {
+            currSelection--
+            screen.focusPrevious()
+          }
+          if ((e.name === 'enter' || e.name === 'return') && agendaItems[currSelection]) {
+            const agendaItem = agendaItems[currSelection]
+            if (agendaItem.msteams && agendaItem.meetingLink) {
+              open(agendaItem.meetingLink, {app: {name: 'teams'}})
+            } else if (agendaItem.meetingLink) {
+              open(agendaItem.meetingLink)
+            } else {
+              // TODO pop up with description
+            }
+          }
+        })
+
+        // render headings if needed
+        if (startDate.date() === new Date().getDate() && !todayAppended) {
+          const heading = blessed.box({
+            width: '100%-4',
+            content: `{blue-fg}{bold}Today/Now{/}  ::  {cyan-fg}${moment().format("dddd Do")}{/cyan-fg}`,
+            tags: true
+          })
+          agenda.append(heading)
+          todayAppended = true
+        }
+        if (startDate.date() === (new Date().getDate() + 1) && !tomorrowAppended) {
+          const heading = blessed.box({
+            width: '100%-4',
+            padding: {
+              top: todayAppended ? 2 : 0
+            },
+            content: `{bold}{blue-fg}Tomorrow{/}  ::  {cyan-fg}${moment().add(1, 'day').format("dddd Do")}{/}`,
+            tags: true
+          })
+          agenda.append(heading)
+          tomorrowAppended = true
+        }
+
+        const agendaItem = {
+          element: listItem,
+          meetingLink: ev['MICROSOFT-SKYPETEAMSMEETINGURL']
+        }
+
+        if (agendaItem.meetingLink.includes("teams.microsoft.com")) {
+          agendaItem.meetingLink = agendaItem.meetingLink.replace(/^https/, "msteams")
+          agendaItem.msteams = true
+        }
+
+        listItem.setContent(`
+           ╷
+   {#fff-fg}${startDate.format("HH:mm")}{/}   │   {#6272a4-fg}${startDate.fromNow()}{/}
+     {#fff-fg}{/}     │   {bold}{white-fg}${ev.summary}{/}
+   ${moment(ev.end).format("{#fff-fg}HH:mm{/}")}   │   {white-fg}${ev.location || (agendaItem.msteams ? 'Microsoft Teams Meeting' : '')}{/}
+           ╵
+`)
+        agendaItems.push(agendaItem)
+        agenda.append(listItem)
+
+        screen.render()
+        agendaItems.length === 1 && agendaItems[0].element.focus()
+      });
+  });
+}
+renderAgenda()
+
+setInterval(renderAgenda, 5000)
+
+
+// Quit on Escape, q, or Control-C.
+screen.key(['escape', 'q', 'C-c'], function (_ch, _key) {
+  screen.destroy()
+});
+
+// Render the screen.
+screen.render();
+
+// close the db
+screen.on('destroy', () => {
+  db.close();
+  return process.exit(0);
+})

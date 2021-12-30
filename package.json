@@ -1,0 +1,19 @@
+{
+  "name": "agenda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "blessed": "^0.1.81",
+    "moment": "^2.29.1",
+    "node-ical": "^0.14.1",
+    "open": "^8.4.0",
+    "sqlite3": "^5.0.2"
+  }
+}
