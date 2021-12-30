@@ -5,7 +5,7 @@
 
 An nice-looking agenda view optimized for MS teams events
 
-Requires [Khal](https://github.com/pimutils/khal).
+Requires NodeJS and [Khal](https://github.com/pimutils/khal).
 
 ## Setup
 
