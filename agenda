@@ -145,6 +145,9 @@ function renderAgenda() {
         if (startDate.date() === new Date().getDate() && !todayAppended) {
           const heading = blessed.box({
             width: '100%-4',
+            padding: {
+              bottom: 1
+            },
             content: `{blue-fg}{bold}Today/Now{/}  ::  {cyan-fg}${moment().format("dddd Do")}{/cyan-fg}`,
             tags: true
           })
@@ -155,7 +158,8 @@ function renderAgenda() {
           const heading = blessed.box({
             width: '100%-4',
             padding: {
-              top: todayAppended ? 2 : 0
+              top: todayAppended ? 2 : 0,
+              bottom: 1
             },
             content: `{bold}{blue-fg}Tomorrow{/}  ::  {cyan-fg}${moment().add(1, 'day').format("dddd Do")}{/}`,
             tags: true
@@ -169,18 +173,17 @@ function renderAgenda() {
           meetingLink: ev['MICROSOFT-SKYPETEAMSMEETINGURL']
         }
 
-        if (agendaItem.meetingLink.includes("teams.microsoft.com")) {
+        if (agendaItem.meetingLink && agendaItem.meetingLink.includes("teams.microsoft.com")) {
           agendaItem.meetingLink = agendaItem.meetingLink.replace(/^https/, "msteams")
           agendaItem.msteams = true
         }
 
-        listItem.setContent(`
+        listItem.setContent(`\
            ╷
    {#fff-fg}${startDate.format("HH:mm")}{/}   │   {#6272a4-fg}${startDate.fromNow()}{/}
      {#fff-fg}{/}     │   {bold}{white-fg}${ev.summary}{/}
    ${moment(ev.end).format("{#fff-fg}HH:mm{/}")}   │   {white-fg}${ev.location || (agendaItem.msteams ? 'Microsoft Teams Meeting' : '')}{/}
-           ╵
-`)
+           ╵ `)
         agendaItems.push(agendaItem)
         agenda.append(listItem)
 
