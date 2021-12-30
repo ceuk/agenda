@@ -1,5 +1,8 @@
 # Nice Khal Agenda
 
+![image](https://user-images.githubusercontent.com/1681236/147759857-a60c909c-7b37-49ad-8a3b-cb0be7a827ac.png)
+
+
 An nice-looking agenda view optimized for MS teams events
 
 Requires [Khal](https://github.com/pimutils/khal).
