@@ -84,12 +84,13 @@ function renderAgenda() {
     let tomorrowAppended
     const from = Math.round(Date.now() / 1000) - 600
     const to = from + 86400
+    const calendarFilter = AGENDA_CALENDARS ? ` AND events.calendar IN (${AGENDA_CALENDARS})` : ''
 
     db.each(`SELECT item, recs_loc.href, dtstart, dtend, ref, etag, dtype, events.calendar 
             FROM recs_loc JOIN events ON 
             recs_loc.href = events.href AND 
             recs_loc.calendar = events.calendar WHERE 
-            (dtstart >= ${from} AND dtend <= ${to}) AND events.calendar IN (${AGENDA_CALENDARS})
+            (dtstart >= ${from} AND dtend <= ${to})${calendarFilter}
             ORDER BY dtstart`,
       function (err, row) {
         if (err) {

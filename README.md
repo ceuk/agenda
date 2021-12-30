@@ -11,8 +11,8 @@ Requires NodeJS and [Khal](https://github.com/pimutils/khal).
 
 * Clone this repo
 * Run `npm i` or `yarn`
-* Either set the `AGENDA_CALENDARS` env var (`export AGENDA_CALENDARS="'mycalendarnamefromkhal'"`) or hardcode the variable near the top of `./agenda`
-* Create a symlink to somewhere in your PATH: `sudo ln -s ~/path/to/this/repo/agenda /usr/local/bin/agenda`
+* Create a symlink to somewhere in your PATH: `sudo ln -s ~/PATH/TO/THIS/REPO/agenda /usr/local/bin/agenda`
+* (optional) set the `AGENDA_CALENDARS` env var (`export AGENDA_CALENDARS="'mycalendarnamefromkhal'"`) to filter by specific calendar name(s)
 * Type `agenda` to start. 
 
 
