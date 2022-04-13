@@ -34,16 +34,16 @@ const getEvent = data => {
 const title = blessed.box({
   left: 'center',
   width: '100%',
-  height: 3,
+  height: 4,
   content: "Agenda",
   align: 'center',
   border: {
     type: 'bg',
-    bg: 'lightblack'
+    bg: '#1d1d1b'
   },
   style: {
     fg: 'white',
-    bg: 'lightblack',
+    bg: '#1d1d1b',
     bold: true
   }
 })
@@ -55,7 +55,7 @@ screen.append(title)
 function renderAgenda() {
   agenda && agenda.destroy()
   agenda = blessed.layout({
-    top: 2,
+    top: 3,
     content: "",
     left: 'center',
     width: '100%',
@@ -66,10 +66,6 @@ function renderAgenda() {
       left: 2,
       right: 2,
       bottom: 1
-    },
-    border: {
-      type: 'bg',
-      bg: 'lightblack'
     },
     style: {
       fg: 'white'
@@ -174,16 +170,24 @@ function renderAgenda() {
           meetingLink: ev['MICROSOFT-SKYPETEAMSMEETINGURL']
         }
 
-        if (agendaItem.meetingLink && agendaItem.meetingLink.includes("teams.microsoft.com")) {
+        if (agendaItem?.meetingLink?.includes("teams.microsoft.com") || ev.location?.includes("teams.microsoft.com")) {
           agendaItem.meetingLink = agendaItem.meetingLink.replace(/^https/, "msteams")
           agendaItem.msteams = true
         }
 
+        if (ev.location?.includes("zoom.us")) {
+          const link = ev.location.split(",").find(v => v.includes("zoom.us"))
+          if (link) agendaItem.meetingLink = link
+          agendaItem.zoom = true
+        }
+
+        const location = (agendaItem.msteams ? 'Microsoft Teams Meeting' : (agendaItem.zoom ? 'Zoom Meeting' : ev.location))
+
         listItem.setContent(`\
            ╷
    {#fff-fg}${startDate.format("HH:mm")}{/}   │   {#6272a4-fg}${startDate.fromNow()}{/}
-     {#fff-fg}{/}     │   {bold}{white-fg}${ev.summary}{/}
-   ${moment(ev.end).format("{#fff-fg}HH:mm{/}")}   │   {white-fg}${ev.location || (agendaItem.msteams ? 'Microsoft Teams Meeting' : '')}{/}
+     {#fff-fg}{/}     │   {bold}{white-fg}${ev.summary.val || ev.summary}{/}
+   ${moment(ev.end).format("{#fff-fg}HH:mm{/}")}   │   {white-fg}${location}{/}
            ╵ `)
         agendaItems.push(agendaItem)
         agenda.append(listItem)
